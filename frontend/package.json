@@ -1,0 +1,36 @@
+{
+  "name": "coding-roadmap",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@react-three/fiber": "^9.1.2",
+    "@tsparticles/engine": "^3.8.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.18.1",
+    "gsap": "^3.13.0",
+    "lucide-react": "^0.522.0",
+    "next": "15.3.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-dropzone": "^14.3.8",
+    "react-tsparticles": "^2.12.2",
+    "recharts": "^2.15.4",
+    "tailwind-merge": "^3.3.1",
+    "three": "^0.177.0",
+    "tsparticles-slim": "^2.12.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.4",
+    "tailwindcss": "^4"
+  }
+}

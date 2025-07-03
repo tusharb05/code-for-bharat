@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+ @keyframes border-pulse {
+          0%, 100% { border-color: rgba(6, 182, 212, 0.5); box-shadow: 0 0 10px rgba(6, 182, 212, 0.3); }
+          50% { border-color: rgba(34, 211, 238, 0.8); box-shadow: 0 0 20px rgba(34, 211, 238, 0.6); }
+        }
+        .animate-border-pulse {
+          animation: border-pulse 3s infinite ease-in-out;
+        }
+
+        .bg-repeating-linear-gradient {
+          background-image: repeating-linear-gradient(
+            -60deg,
+            rgba(6, 182, 212, 0.2) 0px,
+            rgba(6, 182, 212, 0.2) 2px,
+            transparent 2px,
+            transparent 8px
+          );
+          background-size: 100% 10px;
+        }
+
+        .bg-repeating-linear-gradient-alt {
+          background-image: repeating-linear-gradient(
+            60deg,
+            rgba(34, 211, 238, 0.2) 0px,
+            rgba(34, 211, 238, 0.2) 2px,
+            transparent 2px,
+            transparent 8px
+          );
+          background-size: 100% 10px;
+        }
+
+        @keyframes data-flow {
+          0% { background-position: 0 0; }
+          100% { background-position: 100% 100%; }
+        }
+        .animate-data-flow {
+          animation: data-flow 15s linear infinite;
+        }
+
+        @keyframes data-flow-alt {
+          0% { background-position: 100% 100%; }
+          100% { background-position: 0 0; }
+        }
+        .animate-data-flow-alt {
+          animation: data-flow-alt 20s linear infinite;
+        }

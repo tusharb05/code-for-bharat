@@ -1,0 +1,7 @@
+<!-- public/grid-pattern.svg -->
+<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+  <path d="M0 0h20v20H0z" fill="none"/>
+  <path d="M20 1V0H0v1h20zm0 4V3H0v2h20zm0 4V7H0v2h20zm0 4v-2H0v2h20zm0 4v-2H0v2h20zM1 0v20H0V0h1zm4 0v20H4V0h1zm4 0v20H8V0h1zm4 0v20h-1V0h1zm4 0v20h-1V0h1z" 
+        fill="currentColor" 
+        opacity="0.1"/>
+</svg>
