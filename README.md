@@ -1,4 +1,4 @@
-# SkillMatch: AI-Powered Career Roadmap Generator
+# CodeLens: AI-Powered Career Roadmap Generator
 
 SkillMatch is an AI-powered platform that generates customized learning and project roadmaps for job seekers. It helps bridge the gap between a user's current skills and experience and their dream job by analyzing their resume, target role, and available timeline.
 
@@ -17,7 +17,7 @@ SkillMatch is an AI-powered platform that generates customized learning and proj
 ## 🛠️ Tech Stack
 
 - **Frontend:** Next.js, JavaScript, Tailwind CSS
-- **Backend:** Django, Django REST Framework
+- **Backend:** Django, Django REST Framework, PostgreSQL (NeonDB)
 - **AI:** LangChain + DeepSeek AI models
 - **Deployment:** Docker (optional), AWS/GCP-compatible
 
