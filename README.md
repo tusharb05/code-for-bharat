@@ -43,7 +43,7 @@ SkillMatch is an AI-powered platform that generates customized learning and proj
 
 - Node.js (v18+)
 - Python (v3.10+)
-- PostgreSQL or SQLite
+- PostgreSQL
 - DeepSeek API key (or local model setup)
 
 ### Backend Setup
