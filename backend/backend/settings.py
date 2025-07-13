@@ -20,7 +20,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-q(9h2hztcz1@d-!&f-zw)b3x!ble@tj5d(@cm@qk1l*1587i28'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -55,8 +54,6 @@ from dotenv import load_dotenv
 from urllib.parse import urlparse, parse_qsl
 
 load_dotenv()
-
-tmpPostgres = 'postgresql://neondb_owner:npg_5eY0tyNQwPcn@ep-empty-tree-a1rg2fo3-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
 
 parsed_url = urlparse(tmpPostgres)
 
