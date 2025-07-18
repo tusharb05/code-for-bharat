@@ -39,60 +39,71 @@ class RoadmapSerializer(serializers.ModelSerializer):
 from rest_framework import serializers
 from .models import Roadmap, Week, Task
 
-
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ['id', 'title', 'resource_link', 'duration', 'type', 'completed']
+        fields = ['title', 'resource_link', 'duration', 'type']
 
-
-class WeekSerializer(serializers.ModelSerializer):
-    tasks = TaskSerializer(many=True, read_only=True)
+class WeekWithTasksSerializer(serializers.ModelSerializer):
+    tasks = TaskSerializer(many=True)
 
     class Meta:
         model = Week
-        fields = ['id', 'title', 'order', 'milestone', 'progress', 'tasks']
+        fields = ['title', 'milestone', 'tasks']
+
+# class TaskSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Task
+#         fields = ['id', 'title', 'resource_link', 'duration', 'type', 'completed']
 
 
-class RoadmapDetailSerializer(serializers.ModelSerializer):
-    weeks = WeekSerializer(many=True, read_only=True)
+# class WeekSerializer(serializers.ModelSerializer):
+#     tasks = TaskSerializer(many=True, read_only=True)
 
-    class Meta:
-        model = Roadmap
-        fields = [
-            'id', 'goal', 'timeline_weeks', 'parsed_resume',
-            'progress', 'created_at', 'weeks'
-        ]
+#     class Meta:
+#         model = Week
+#         fields = ['id', 'title', 'order', 'milestone', 'progress', 'tasks']
 
 
-class RoadmapListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Roadmap
-        fields = [
-            'id',
-            'goal',
-            'timeline_weeks',
-            'progress',
-            'created_at',
-        ]
+# class RoadmapDetailSerializer(serializers.ModelSerializer):
+#     weeks = WeekSerializer(many=True, read_only=True)
+
+#     class Meta:
+#         model = Roadmap
+#         fields = [
+#             'id', 'goal', 'timeline_weeks', 'parsed_resume',
+#             'progress', 'created_at', 'weeks'
+#         ]
 
 
-class TaskCompletionToggleSerializer(serializers.Serializer):
-    user_id = serializers.IntegerField()
-    task_id = serializers.IntegerField()
-    completed = serializers.BooleanField()
+# class RoadmapListSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Roadmap
+#         fields = [
+#             'id',
+#             'goal',
+#             'timeline_weeks',
+#             'progress',
+#             'created_at',
+#         ]
 
-    def validate(self, data):
-        task_id = data.get("task_id")
-        user_id = data.get("user_id")
 
-        try:
-            task = Task.objects.select_related("week__roadmap__user").get(id=task_id)
-        except Task.DoesNotExist:
-            raise serializers.ValidationError("Invalid task_id provided.")
+# class TaskCompletionToggleSerializer(serializers.Serializer):
+#     user_id = serializers.IntegerField()
+#     task_id = serializers.IntegerField()
+#     completed = serializers.BooleanField()
 
-        if task.week.roadmap.user.id != user_id:
-            raise serializers.ValidationError("Task does not belong to this user.")
+#     def validate(self, data):
+#         task_id = data.get("task_id")
+#         user_id = data.get("user_id")
 
-        data["task_instance"] = task
-        return data
+#         try:
+#             task = Task.objects.select_related("week__roadmap__user").get(id=task_id)
+#         except Task.DoesNotExist:
+#             raise serializers.ValidationError("Invalid task_id provided.")
+
+#         if task.week.roadmap.user.id != user_id:
+#             raise serializers.ValidationError("Task does not belong to this user.")
+
+#         data["task_instance"] = task
+#         return data

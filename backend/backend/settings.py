@@ -20,7 +20,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+import os
+from dotenv import load_dotenv
+from urllib.parse import urlparse, parse_qsl
 
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -49,15 +55,16 @@ REST_FRAMEWORK = {
 }
 
 # Add these at the top of your settings.py
-import os
-from dotenv import load_dotenv
-from urllib.parse import urlparse, parse_qsl
+# import os
+# from dotenv import load_dotenv
+# from urllib.parse import urlparse, parse_qsl
 
-load_dotenv()
+# load_dotenv()
 
 # Replace the DATABASES section of your settings.py with this
 tmpPostgres = urlparse(os.getenv("DATABASE_URL"))
-
+# print(os.getenv("DATABASE_URL"))
+# print('\n\n\n\n\n\n\n')
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
