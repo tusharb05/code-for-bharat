@@ -56,19 +56,18 @@ from urllib.parse import urlparse, parse_qsl
 
 load_dotenv()
 
-tmpPostgres = 'postgresql://neondb_owner:npg_5eY0tyNQwPcn@ep-empty-tree-a1rg2fo3-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
-
-parsed_url = urlparse(tmpPostgres)
+# Replace the DATABASES section of your settings.py with this
+tmpPostgres = urlparse(os.getenv("DATABASE_URL"))
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': parsed_url.path.lstrip('/'),
-        'USER': parsed_url.username,
-        'PASSWORD': parsed_url.password,
-        'HOST': parsed_url.hostname,
-        'PORT': parsed_url.port or 5432,
-        'OPTIONS': dict(parse_qsl(parsed_url.query)),
+        'NAME': tmpPostgres.path.replace('/', ''),
+        'USER': tmpPostgres.username,
+        'PASSWORD': tmpPostgres.password,
+        'HOST': tmpPostgres.hostname,
+        'PORT': 5432,
+        'OPTIONS': dict(parse_qsl(tmpPostgres.query)),
     }
 }
 
