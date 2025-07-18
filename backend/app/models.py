@@ -100,3 +100,15 @@ class Task(models.Model):
         self.save()
         self.week.update_progress()
 
+
+class Credential(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="credentials")
+    title = models.CharField(max_length=255)  # e.g., "AWS Certified Developer"
+    issuing_entity = models.CharField(max_length=255)  # e.g., "Amazon Web Services"
+    issuance_date = models.DateField()
+    verification_url = models.URLField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} by {self.issuing_entity} - {self.user.email}"

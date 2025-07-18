@@ -1,6 +1,6 @@
 # serializers.py
 from rest_framework import serializers
-from .models import Roadmap
+from .models import Roadmap, Credential
 from PyPDF2 import PdfReader
 from .utils.resume_parser import extract_sections
 
@@ -90,3 +90,7 @@ class RoadmapListSerializer(serializers.ModelSerializer):
         fields = ['id', 'goal', 'timeline_weeks', 'parsed_resume', 'created_at', 'progress']
 
 
+class CredentialSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Credential
+        fields = ['id', 'title', 'issuing_entity', 'issuance_date', 'verification_url']

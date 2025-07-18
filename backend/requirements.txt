@@ -4,3 +4,4 @@ PyJWT
 PyPDF2
 python-dotenv
 psycopg2-binary
+django-cors-headers

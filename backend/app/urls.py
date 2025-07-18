@@ -5,7 +5,10 @@ from .views import (RegisterView,
                     BulkWeekCreateView,
                     UserRoadmapListView,
                     RoadmapDetailView,
-                    TaskCompletionUpdateView)
+                    TaskCompletionUpdateView,
+                    CreateCredentialView,
+                    DeleteCredentialView,
+                    ListUserCredentialsView)
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -15,4 +18,7 @@ urlpatterns = [
     path("my-roadmaps/", UserRoadmapListView.as_view(), name="user-roadmap-list"),
     path('roadmap/<int:pk>/', RoadmapDetailView.as_view(), name='roadmap-detail'),
     path('task/<int:pk>/update-status/', TaskCompletionUpdateView.as_view(), name='task-update-status'),
+    path('credentials/create/', CreateCredentialView.as_view(), name='create-cred'),
+    path('credentials/delete/<int:credential_id>/', DeleteCredentialView.as_view(), name='delete-credential'),
+    path('credentials/', ListUserCredentialsView.as_view(), name='list-user-credentials'),
 ]
