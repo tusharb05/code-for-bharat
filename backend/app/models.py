@@ -99,3 +99,4 @@ class Task(models.Model):
         self.completed = True
         self.save()
         self.week.update_progress()
+

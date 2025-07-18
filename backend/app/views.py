@@ -1,11 +1,11 @@
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.hashers import make_password
 from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from .utils.jwt_utils import generate_jwt
-from .serializers import RoadmapSerializer 
-# RoadmapDetailSerializer, RoadmapListSerializer, TaskCompletionToggleSerializer
+from .serializers import RoadmapSerializer, RoadmapListSerializer, RoadmapDetailSerializer, TaskUpdateSerializer
 
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -106,58 +106,38 @@ class BulkWeekCreateView(APIView):
             {"message": "Weeks and tasks created successfully.", "week_ids": created_weeks},
             status=status.HTTP_201_CREATED
         )
+
+
+
+class UserRoadmapListView(ListAPIView):
+    serializer_class = RoadmapListSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Roadmap.objects.filter(user=self.request.user).order_by('-created_at')
     
-# class RoadmapByIdView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request):
-#         user = request.user
-#         roadmap_id = request.data.get("roadmap_id")
-
-#         if not roadmap_id:
-#             return Response({"message": "roadmap_id is required in the request body."}, status=400)
-
-#         try:
-#             roadmap = Roadmap.objects.get(id=roadmap_id, user=user)
-#         except Roadmap.DoesNotExist:
-#             return Response({"message": "Roadmap not found for this user."}, status=404)
-
-#         serializer = RoadmapDetailSerializer(roadmap)
-#         return Response(serializer.data)
 
 
-# class RoadmapListByUserView(APIView):
-#     def post(self, request):
-#         user_id = request.data.get("user_id")
+class RoadmapDetailView(RetrieveAPIView):
+    queryset = Roadmap.objects.all()
+    serializer_class = RoadmapDetailSerializer
+    permission_classes = [IsAuthenticated]
 
-#         if not user_id:
-#             return Response({"message": "user_id is required in the request body."}, status=400)
-
-#         roadmaps = Roadmap.objects.filter(user_id=user_id).order_by("-created_at")
-
-#         serializer = RoadmapListSerializer(roadmaps, many=True)
-#         return Response(serializer.data)
+    def get_queryset(self):
+        return Roadmap.objects.filter(user=self.request.user)
+    
 
 
-# class ToggleTaskCompletionView(APIView):
-#     def post(self, request):
-#         serializer = TaskCompletionToggleSerializer(data=request.data)
+class TaskCompletionUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
 
-#         if serializer.is_valid():
-#             task = serializer.validated_data["task_instance"]
-#             new_status = serializer.validated_data["completed"]
+    def patch(self, request, pk):
+        task = get_object_or_404(Task, pk=pk)
 
-#             task.completed = new_status
-#             task.save()
+        serializer = TaskUpdateSerializer(task, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Task status updated successfully."})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-#             # Update week and roadmap progress
-#             task.week.update_progress()
 
-#             return Response({
-#                 "message": f"Task marked as {'completed' if new_status else 'not completed'}.",
-#                 "task_id": task.id,
-#                 "week_progress": task.week.progress,
-#                 "roadmap_progress": task.week.roadmap.progress
-#             })
-
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
