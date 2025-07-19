@@ -45,3 +45,17 @@
         .animate-data-flow-alt {
           animation: data-flow-alt 20s linear infinite;
         }
+
+        @keyframes sparkle-pulse {
+    0%, 100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+    50% {
+        transform: scale(1.1);
+        filter: brightness(1.5);
+    }
+}
+.animate-pulse-slow {
+    animation: sparkle-pulse 1.8s infinite ease-in-out;
+}
