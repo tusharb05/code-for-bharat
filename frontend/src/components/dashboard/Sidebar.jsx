@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/context/AuthContext';
 
 // Define animation variants for smoother transitions
 const textVariants = {
@@ -32,10 +33,10 @@ const navItems = [
   { href: '/dashboard/certifications', icon: <BadgeCheck size={22} />, name: 'Certifications' },
   { href: '/dashboard/support', icon: <LifeBuoy size={22} />, name: 'Support' },
   { href: '/dashboard/settings', icon: <Settings size={22} />, name: 'Settings' },
-  { href: '/auth/logout', icon: <LogOut size={22} />, name: 'Logout' },
+  { href: 'logout', icon: <LogOut size={22} />, name: 'Logout' },
 ];
 
-const NavItem = ({ item, expanded }) => {
+const NavItem = ({ item, expanded, onLogout }) => {
   const pathname = usePathname();
   const isActive = pathname === item.href;
 
@@ -63,13 +64,63 @@ const NavItem = ({ item, expanded }) => {
     }
   };
 
+  if (item.name === 'Logout') {
+    return (
+      <li>
+        <button
+          onClick={onLogout}
+          tabIndex={0}
+          aria-label={item.name}
+          className="block group w-full text-left"
+        >
+          <motion.div
+            variants={itemHoverVariants}
+            initial="initial"
+            animate={isActive ? "active" : "initial"}
+            whileHover="hover"
+            whileTap={{ scale: 0.98, boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
+            className={`
+              px-5 py-3 my-2 rounded-lg cursor-pointer flex items-center gap-4 transition-all duration-200 ease-in-out
+              border border-neutral-800/60
+              ${!expanded && 'justify-center'}
+              relative overflow-hidden
+            `}
+            title={!expanded ? item.name : undefined}
+          >
+            <motion.div
+              initial={false}
+              animate={{ scale: isActive ? 1.05 : 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              className={`
+                ${isActive ? 'text-white' : 'text-neutral-500 group-hover:text-cyan-300'}
+                transition-colors duration-200 relative z-10
+              `}
+            >
+              {item.icon}
+            </motion.div>
+            {expanded && (
+              <motion.span
+                variants={textVariants}
+                initial="collapsed"
+                animate="expanded"
+                exit="collapsed"
+                className="text-base font-medium text-white overflow-hidden whitespace-nowrap relative z-10"
+              >
+                {item.name}
+              </motion.span>
+            )}
+          </motion.div>
+        </button>
+      </li>
+    );
+  }
   return (
     <li>
       <Link href={item.href} tabIndex={0} aria-label={item.name} className="block group">
         <motion.div
           variants={itemHoverVariants}
           initial="initial"
-          animate={isActive ? "active" : "initial"} // Set initial/active based on isActive
+          animate={isActive ? "active" : "initial"}
           whileHover="hover"
           whileTap={{ scale: 0.98, boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
           className={`
@@ -80,7 +131,6 @@ const NavItem = ({ item, expanded }) => {
           `}
           title={!expanded ? item.name : undefined}
         >
-          {/* Active state inner glow (subtle, pulsing) */}
           {isActive && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -89,11 +139,9 @@ const NavItem = ({ item, expanded }) => {
               className="absolute inset-0 bg-blue-500 rounded-full blur-xl opacity-20"
             />
           )}
-
-          {/* Icon with subtle hover effect, placed above glow */}
           <motion.div
             initial={false}
-            animate={{ scale: isActive ? 1.05 : 1 }} // Slightly larger active icon
+            animate={{ scale: isActive ? 1.05 : 1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             className={`
               ${isActive ? 'text-white' : 'text-neutral-500 group-hover:text-cyan-300'}
@@ -102,14 +150,13 @@ const NavItem = ({ item, expanded }) => {
           >
             {item.icon}
           </motion.div>
-
           {expanded && (
             <motion.span
               variants={textVariants}
               initial="collapsed"
               animate="expanded"
               exit="collapsed"
-              className="text-base font-medium text-white overflow-hidden whitespace-nowrap relative z-10" // Larger font, white text
+              className="text-base font-medium text-white overflow-hidden whitespace-nowrap relative z-10"
             >
               {item.name}
             </motion.span>
@@ -125,6 +172,7 @@ const SIDEBAR_EXPANDED = 240;
 const SIDEBAR_COLLAPSED = 64;
 
 export default function Sidebar({ onWidthChange }) {
+  const { logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const sidebarRef = useRef(null);
@@ -212,7 +260,7 @@ export default function Sidebar({ onWidthChange }) {
         <div className="overflow-y-auto px-2 py-3 flex-1">
           <ul>
             {navItems.map((item) => (
-              <NavItem key={item.name} item={item} expanded={expanded} />
+              <NavItem key={item.name} item={item} expanded={expanded} onLogout={logout} />
             ))}
           </ul>
         </div>
@@ -242,20 +290,6 @@ export default function Sidebar({ onWidthChange }) {
               </AnimatePresence>
             </motion.div>
           </Link>
-          <AnimatePresence mode="wait">
-            {expanded && (
-              <motion.p
-                key="footer-text"
-                variants={textVariants}
-                initial="collapsed"
-                animate="expanded"
-                exit="collapsed"
-                className="text-xs text-center mt-4 text-neutral-500 transition-colors duration-200 tracking-wider"
-              >
-                Powered by CodeLens AI
-              </motion.p>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 

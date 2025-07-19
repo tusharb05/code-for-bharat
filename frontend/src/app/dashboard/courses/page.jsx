@@ -1,1 +1,0 @@
-// File to be deleted: src/app/dashboard/courses/page.jsx 

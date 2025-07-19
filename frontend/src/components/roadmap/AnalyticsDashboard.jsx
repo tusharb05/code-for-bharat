@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import ResumeAnalysisSection from "./ResumeAnalysisSection";
 import PostRoadmapAnalysis from "./PostRoadmapAnalysis";
-import { getRoadmapProgress, getWeeklySchedule } from "@/lib/roadmapUtils";
+// import { getRoadmapProgress } from "@/lib/roadmapUtils";
 
 const StatsCard = ({ icon: Icon, title, value, subtitle, delay = 0 }) => {
   return (
@@ -107,14 +107,20 @@ const ProgressRing = ({ progress, size = 120, strokeWidth = 8 }) => {
 };
 
 export default function AnalyticsDashboard({ roadmap }) {
-  const weeklySchedule = getWeeklySchedule(roadmap);
-  const allTasks = roadmap.timeline
-    .filter((i) => i.type === "module")
-    .flatMap((m) => m.tasks);
-  const completedTasks = allTasks.filter((t) => t.completed);
-  const allMilestones = roadmap.timeline.filter((i) => i.type === "milestone");
-  const completedMilestones = allMilestones.filter((m) => m.completed);
-  const progress = getRoadmapProgress(roadmap, completedTasks, completedMilestones);
+  // Use weeks-based structure from backend
+  const weeks = Array.isArray(roadmap.weeks) ? roadmap.weeks : [];
+  const allTasks = weeks.flatMap(week => Array.isArray(week.tasks) ? week.tasks : []);
+  const completedTasks = allTasks.filter(t => t.completed);
+  // If you have milestones as a property on week, you can extract them here
+  const allMilestones = weeks.filter(week => week.milestone);
+  const completedMilestones = allMilestones.filter(m => m.progress === 100 || (m.tasks && m.tasks.every(t => t.completed)));
+  // Progress: percent of completed tasks out of all tasks
+  const progress = allTasks.length > 0 ? Math.round((completedTasks.length / allTasks.length) * 100) : 0;
+  // Weekly schedule for charts
+  const weeklySchedule = weeks.map(w => ({
+    week: w.title || `Week ${w.order}`,
+    progress: Array.isArray(w.tasks) && w.tasks.length > 0 ? Math.round(w.tasks.filter(t => t.completed).length / w.tasks.length * 100) : 0
+  }));
 
   return (
     <div className="space-y-8">
@@ -153,7 +159,7 @@ export default function AnalyticsDashboard({ roadmap }) {
             <StatsCard
               icon={Clock}
               title="Total Weeks"
-              value={weeklySchedule.length}
+              value={weeks.length}
               subtitle="Learning path"
               delay={0.1}
             />
@@ -190,10 +196,7 @@ export default function AnalyticsDashboard({ roadmap }) {
         </div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={weeklySchedule.map(w => ({
-              week: `Week ${w.week}`,
-              progress: w.tasks.length > 0 ? Math.round(w.tasks.filter(t => t.completed).length / w.tasks.length * 100) : 0
-            }))}>
+            <AreaChart data={weeklySchedule}>
               <defs>
                 <linearGradient
                   id="progressGradient"

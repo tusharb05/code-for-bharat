@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -13,68 +13,197 @@ import RefineRoadmapModal from "@/components/dashboard/RefineRoadmapModal";
 import WeekScheduler from "@/components/roadmap/WeekScheduler";
 import AnalyticsDashboard from "@/components/roadmap/AnalyticsDashboard";
 import CoursesSection from "@/components/roadmap/CoursesSection";
-import { getWeeklySchedule, getCoursesProgress, getRoadmapProgress } from "@/lib/roadmapUtils";
-import mockRoadmap from "@/lib/mockRoadmap";
+import { useParams } from "next/navigation";
+import { useAuth } from '@/context/AuthContext';
 
 export default function RoadmapDetailPage() {
-  const [roadmap, setRoadmap] = useState(mockRoadmap);
+  const { id } = useParams();
+  const { token } = useAuth();
+  const [roadmap, setRoadmap] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isRefineModalOpen, setRefineModalOpen] = useState(false);
-  const [expandedWeeks, setExpandedWeeks] = useState([1]);
+  const [expandedWeeks, setExpandedWeeks] = useState([]);
   const [activeView, setActiveView] = useState("schedule");
 
-  const weeklySchedule = getWeeklySchedule(roadmap);
-  const allTasks = roadmap.timeline.filter((item) => item.type === "module").flatMap((m) => m.tasks);
-  const completedTasks = allTasks.filter((t) => t.completed);
-  const allMilestones = roadmap.timeline.filter((item) => item.type === "milestone");
-  const completedMilestones = allMilestones.filter((m) => m.completed);
-  const coursesProgress = getCoursesProgress(roadmap, completedTasks);
-  const overallProgress = getRoadmapProgress(roadmap, completedTasks, completedMilestones);
+  useEffect(() => {
+    if (!id || !token) {
+      if (!token) setError("Authentication token not found. Please log in.");
+      setLoading(false);
+      return;
+    }
 
-  const toggleTaskCompletion = (weekIndex, taskIndex) => {
-    const newRoadmap = { ...roadmap };
-    const week = weeklySchedule[weekIndex];
-    newRoadmap.timeline
-      .filter((item) => item.type === "module" && item.week === week.week)[0]
-      .tasks[taskIndex].completed =
-      !newRoadmap.timeline
-        .filter((item) => item.type === "module" && item.week === week.week)[0]
-        .tasks[taskIndex].completed;
-    setRoadmap(newRoadmap);
-  };
+    setLoading(true);
+    setError(null);
 
-  const toggleMilestoneStatus = (weekIndex, milestoneIndex, status) => {
-    const newRoadmap = { ...roadmap };
-    const week = weeklySchedule[weekIndex];
-    const milestoneWeek = week.week;
-    const milestone = newRoadmap.timeline.find(
-      (item) => item.type === "milestone" && item.week === milestoneWeek
-    );
-    if (milestone) {
-      if (status === "started") {
-        milestone.started = true;
-        milestone.completed = false;
-      } else if (status === "finished") {
-        milestone.started = false;
-        milestone.completed = true;
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_LINK || 'http://localhost:8000/api'}/roadmap/${id}/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+      .then(res => {
+        if (!res.ok) {
+          if (res.status === 401) {
+            throw new Error('Unauthorized. Please log in again.');
+          }
+          throw new Error(`Failed to fetch roadmap: ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        // Ensure data.weeks is an array and sort by 'order'
+        const sortedWeeks = Array.isArray(data.weeks)
+          ? [...data.weeks].sort((a, b) => a.order - b.order)
+          : [];
+        setRoadmap({ ...data, weeks: sortedWeeks });
+        // Expand the first week by default if available
+        setExpandedWeeks(sortedWeeks.length > 0 ? [sortedWeeks[0].order] : []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error fetching roadmap:", err);
+        setError(err.message || 'Failed to load roadmap.');
+        setLoading(false);
+      });
+  }, [id, token]);
+
+  // Data processing and calculations using useMemo for performance
+  const { allTasks, completedTasks, allMilestones, courseTasks, overallProgress, coursesProgress } = useMemo(() => {
+    if (!roadmap || !roadmap.weeks) {
+      return {
+        allTasks: [],
+        completedTasks: [],
+        allMilestones: [],
+        courseTasks: [],
+        overallProgress: 0,
+        coursesProgress: []
+      };
+    }
+
+    const allTasks = roadmap.weeks.flatMap(week => week.tasks);
+    const completedTasks = allTasks.filter(task => task.completed);
+    const allMilestones = roadmap.weeks.filter(week => week.milestone); // Correctly get milestones from weeks
+
+    const totalTasks = allTasks.length;
+    const overallProgress = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0;
+
+    const courseTasksRaw = allTasks.filter(task => task.type === 'COURSE');
+
+    // Process courses for CoursesSection
+    const uniqueCoursesMap = new Map();
+    courseTasksRaw.forEach(task => {
+      if (!uniqueCoursesMap.has(task.id)) { // Use task ID for uniqueness or a combination of title/resource_link
+        const totalHours = task.duration / 60; // Assuming duration is in minutes, convert to hours
+        const weeksNeeded = Math.ceil(totalHours / (roadmap.weeklyCommitment || 6)); // Assuming 6 hours/week if not specified
+        const completedInstances = task.completed ? 1 : 0; // Check if this specific course task is completed
+        const percent = task.completed ? 100 : 0;
+
+        uniqueCoursesMap.set(task.id, {
+          id: task.id,
+          title: task.title,
+          resource_link: task.resource_link,
+          totalHours: totalHours,
+          weeksNeeded: weeksNeeded,
+          progress: `${completedInstances}/${1}`, // Shows 1/1 if completed, 0/1 if not
+          percent: percent,
+        });
       }
-      setRoadmap(newRoadmap);
+    });
+    const coursesProgress = Array.from(uniqueCoursesMap.values());
+
+
+    return {
+      allTasks,
+      completedTasks,
+      allMilestones,
+      courseTasks: courseTasksRaw, // Keeping raw course tasks if needed elsewhere
+      overallProgress,
+      coursesProgress
+    };
+  }, [roadmap]);
+
+
+  const toggleTaskCompletion = async (weekId, taskId) => {
+    const newRoadmap = { ...roadmap };
+    const weekToUpdate = newRoadmap.weeks.find(week => week.id === weekId);
+
+    if (weekToUpdate) {
+      const taskToUpdate = weekToUpdate.tasks.find(task => task.id === taskId);
+      if (taskToUpdate) {
+        taskToUpdate.completed = !taskToUpdate.completed;
+
+        try {
+          // Send PATCH request to update task status on backend
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_LINK || 'http://localhost:8000/api'}/task/${taskId}/update-status/`,
+            {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({ completed: taskToUpdate.completed }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error('Failed to update task status on backend');
+          }
+
+          setRoadmap(newRoadmap); // Update UI only after successful backend update
+        } catch (err) {
+          console.error("Error updating task status:", err);
+          setError(err.message || "Could not update task status.");
+          // Revert UI if backend update fails
+          taskToUpdate.completed = !taskToUpdate.completed;
+          setRoadmap(roadmap);
+        }
+      }
     }
   };
 
-  const addNoteToTask = (weekIndex, taskIndex, note) => {
+  const addNoteToTask = (weekId, taskId, note) => {
     const newRoadmap = { ...roadmap };
-    const week = weeklySchedule[weekIndex];
-    newRoadmap.timeline
-      .filter((item) => item.type === "module" && item.week === week.week)[0]
-      .tasks[taskIndex].note = note;
-    setRoadmap(newRoadmap);
+    const weekToUpdate = newRoadmap.weeks.find(week => week.id === weekId);
+    if (weekToUpdate) {
+      const taskToUpdate = weekToUpdate.tasks.find(task => task.id === taskId);
+      if (taskToUpdate) {
+        taskToUpdate.note = note; // Assuming 'note' field exists or can be added
+        setRoadmap(newRoadmap);
+        // TODO: Implement backend API call to persist the note
+        // For now, it updates only frontend state
+      }
+    }
   };
 
-  const toggleWeekExpansion = (week) => {
+  const toggleWeekExpansion = (order) => {
     setExpandedWeeks((prev) =>
-      prev.includes(week) ? prev.filter((w) => w !== week) : [...prev, week],
+      prev.includes(order) ? prev.filter((o) => o !== order) : [...prev, order],
     );
   };
+
+  if (loading) return (
+    <div className="min-h-screen bg-gradient-to-br from-[#050810] via-[#0a0f1c] to-[#0f1419] ml-16 flex items-center justify-center text-white">
+      Loading roadmap...
+    </div>
+  );
+  if (error) return (
+    <div className="min-h-screen bg-gradient-to-br from-[#050810] via-[#0a0f1c] to-[#0f1419] ml-16 flex items-center justify-center text-red-400 text-center p-4">
+      <p>Error loading roadmap: {error}</p>
+      <p className="mt-2 text-sm text-neutral-400">Please ensure you are logged in and have access to this roadmap.</p>
+    </div>
+  );
+  if (!roadmap || !Array.isArray(roadmap.weeks) || roadmap.weeks.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#050810] via-[#0a0f1c] to-[#0f1419] ml-16 flex items-center justify-center text-neutral-400">
+        Roadmap data is unavailable or malformed.
+      </div>
+    );
+  }
+
+  // Determine the number of completed milestones
+  const completedMilestonesCount = allMilestones.filter(m => m.progress === 100 || (m.tasks && m.tasks.every(t => t.completed))).length;
+
 
   return (
     <>
@@ -89,10 +218,10 @@ export default function RoadmapDetailPage() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-white">
-                    {roadmap.title}
+                    {roadmap.goal}
                   </h1>
                   <p className="text-neutral-400 text-sm">
-                    {roadmap.goalSummary}
+                    {roadmap.parsed_resume ? JSON.parse(roadmap.parsed_resume).experience[0] : "Personalized learning path"}
                   </p>
                 </div>
               </div>
@@ -133,8 +262,7 @@ export default function RoadmapDetailPage() {
                   <div className="text-sm">
                     <div className="text-white font-medium">Progress</div>
                     <div className="text-neutral-400 text-xs">
-                      {(completedTasks.length + completedMilestones.length)}/
-                      {(allTasks.length + allMilestones.length)} items
+                      {completedTasks.length}/{allTasks.length} items
                     </div>
                   </div>
                 </div>
@@ -190,15 +318,15 @@ export default function RoadmapDetailPage() {
             <div className="flex items-center gap-4 text-sm text-neutral-400">
               <div className="flex items-center gap-2">
                 <Clock size={14} />
-                <span>7 weeks total</span>
+                <span>{roadmap.timeline_weeks} weeks total</span>
               </div>
               <div className="flex items-center gap-2">
                 <Target size={14} />
-                <span>6 hours/week</span>
+                <span>{roadmap.weeklyCommitment || '6'} hours/week</span> {/* Use actual commitment if available */}
               </div>
               <div className="flex items-center gap-2">
                 <Award size={14} />
-                <span>{allMilestones.length} milestones</span>
+                <span>{completedMilestonesCount} / {allMilestones.length} milestones completed</span>
               </div>
             </div>
           </div>
@@ -214,17 +342,19 @@ export default function RoadmapDetailPage() {
             {activeView === "schedule" ? (
               <div className="space-y-6">
                 {/* Week schedulers */}
-                {weeklySchedule.map((weekObj, index) => (
+                {roadmap.weeks.map((weekObj) => (
                   <WeekScheduler
-                    key={weekObj.week}
-                    week={weekObj.week}
+                    key={weekObj.id} // Use unique ID for key
+                    week={weekObj.order} // Use order for week number
+                    title={weekObj.title} // Pass the week title
                     tasks={weekObj.tasks}
-                    milestones={weekObj.milestones}
-                    expanded={expandedWeeks.includes(weekObj.week)}
-                    onToggle={() => toggleWeekExpansion(weekObj.week)}
-                    onToggleTask={(taskIndex) => toggleTaskCompletion(index, taskIndex)}
-                    onAddNote={(taskIndex, note) => addNoteToTask(index, taskIndex, note)}
-                    onToggleMilestone={(milestoneIndex, status) => toggleMilestoneStatus(index, milestoneIndex, status)}
+                    milestone={weekObj.milestone} // Pass milestone status
+                    progress={weekObj.progress} // Pass week progress if available
+                    expanded={expandedWeeks.includes(weekObj.order)}
+                    onToggle={() => toggleWeekExpansion(weekObj.order)}
+                    onToggleTask={(taskId) => toggleTaskCompletion(weekObj.id, taskId)}
+                    onAddNote={(taskId, note) => addNoteToTask(weekObj.id, taskId, note)}
+                    // onToggleMilestone removed as milestone status is on the week object itself
                   />
                 ))}
                 {/* Courses Section */}

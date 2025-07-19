@@ -1,12 +1,26 @@
 'use client';
 import Sidebar from '@/components/dashboard/Sidebar';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function AppLayout({ children }) {
   const [sidebarWidth, setSidebarWidth] = useState(256);
   const [scrolled, setScrolled] = useState(false);
   const mainRef = useRef(null);
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  // Redirect to login if not authenticated (useEffect to avoid setState in render)
+  useEffect(() => {
+    if (!loading && (!user || !user.isAuthenticated)) {
+      router.replace('/login');
+    }
+  }, [loading, user, router]);
+  if (!loading && (!user || !user.isAuthenticated)) {
+    return null;
+  }
 
   const handleScroll = () => {
     if (mainRef.current) {
@@ -33,7 +47,6 @@ export default function AppLayout({ children }) {
           transition={{ duration: 0.5, ease: 'easeInOut' }}
           className="px-6 md:px-12 pt-8 pb-16 rounded-2xl"
         >
-          {/* We can add a top navbar here later if needed */}
           {children}
         </motion.div>
       </motion.main>

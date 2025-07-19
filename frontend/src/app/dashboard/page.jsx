@@ -5,6 +5,7 @@ import { Target, GitGraph, PlusCircle, Brain, BookOpen, Atom, TrendingUp, CheckC
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/context/AuthContext';
 
 // --- Futuristic Utility Components & Data ---
 
@@ -105,6 +106,32 @@ const cardVariants = {
 export default function DashboardPage() {
   const webDevProgress = 78; // Example progress for Web Development
   const segments = [25, 50, 75, 100]; // Milestones for the segmented progress bar
+  const { token } = useAuth();
+  const [roadmaps, setRoadmaps] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_LINK || 'http://localhost:8000/api'}/my-roadmaps/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+      .then(res => res.json())
+      .then(data => {
+        setRoadmaps(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to load roadmaps.');
+        setLoading(false);
+      });
+  }, [token]);
+
+  // Find the latest roadmap by created_at
+  const latestRoadmap = roadmaps.length > 0 ? [...roadmaps].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] : null;
 
   return (
     <motion.div
@@ -185,69 +212,54 @@ export default function DashboardPage() {
             <h2 className="text-lg font-bold text-blue-200 tracking-wide">Active Journey Flux</h2>
           </div>
 
-          <p className="text-xs text-neutral-300 mb-2 text-center">
-            Tracking your current trajectory:
-            <span className="block text-base font-semibold text-blue-100">Web Development Launchpad</span>
-          </p>
-
-          {/* Enhanced Progress Bar */}
-          <div className="w-full max-w-xs mb-4 relative">
-            <div className="relative h-3 bg-neutral-700 rounded-full overflow-hidden shadow-inner">
-              <motion.div
-                className="absolute h-full bg-gradient-to-r from-blue-500 to-blue-700 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${webDevProgress}%` }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-              />
-            </div>
-            <div className="flex justify-between w-full mt-2">
-              {segments.map((segment, index) => (
-                <div key={index} className="relative flex-1 text-center">
-                  <div
-                    className={`absolute -top-4 w-0.5 h-3 ${webDevProgress >= segment ? 'bg-blue-400' : 'bg-neutral-600'} rounded-full left-1/2 -translate-x-1/2`}
+          {loading ? (
+            <div className="text-blue-300 mt-4">Loading your latest roadmap...</div>
+          ) : error ? (
+            <div className="text-red-400 mt-4">{error}</div>
+          ) : latestRoadmap ? (
+            <>
+              <p className="text-xs text-neutral-300 mb-2 text-center">
+                Tracking your current trajectory:
+                <span className="block text-base font-semibold text-blue-100">{latestRoadmap.goal}</span>
+              </p>
+              {/* Progress Bar */}
+              <div className="w-full max-w-xs mb-4 relative">
+                <div className="relative h-3 bg-neutral-700 rounded-full overflow-hidden shadow-inner">
+                  <motion.div
+                    className="absolute h-full bg-gradient-to-r from-blue-500 to-blue-700 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${latestRoadmap.progress ? Math.round(latestRoadmap.progress) : 0}%` }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
                   />
-                  <span className={`text-xs ${webDevProgress >= segment ? 'text-blue-300 font-medium' : 'text-neutral-500'}`}>
-                    {segment}%
-                  </span>
                 </div>
-              ))}
-            </div>
-            <div className="text-center mt-2 text-xl font-extrabold text-blue-400 drop-shadow-md">
-              {webDevProgress}% Complete
-            </div>
-          </div>
-
-          {/* Next Milestone & Recent Activities */}
-          <div className="w-full text-left bg-[#10151c] p-3 rounded-lg border border-blue-900/40 mb-4">
-            <h3 className="text-base font-bold text-neutral-200 mb-2 flex items-center gap-2">
-              <Target size={20} className="text-blue-400" /> Next Milestone:
-            </h3>
-            <p className="text-neutral-300 text-sm ml-1 mb-2">
-              Mastering React Hooks (Section 4.2)
-              <span className="block text-xs text-neutral-500 mt-1 flex items-center gap-1">
-                <Clock size={16} /> Est. Completion: 3 days
-              </span>
-            </p>
-
-            <h3 className="text-base font-bold text-neutral-200 mb-2 flex items-center gap-2 border-t border-neutral-700/50 pt-2 mt-2">
-              <CheckCircle size={20} className="text-blue-400" /> Recent Activities:
-            </h3>
-            <ul className="list-disc list-inside text-neutral-400 text-xs space-y-1 ml-1">
-              <li>Completed "Component Lifecycle" module.</li>
-              <li>Reviewed JavaScript ES6 fundamentals.</li>
-              <li>Practiced Redux state management (7 problems).</li>
-            </ul>
-          </div>
-
-          <Link href="/dashboard/roadmaps/web-development" className="block mt-2">
-            <motion.div
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-700/20 border border-blue-700 rounded-full text-blue-200 font-semibold text-base
-                           hover:bg-blue-700/40 hover:border-blue-400 transition-all duration-200 ease-out"
-              whileHover={{ x: 5 }}
-            >
-              Deep Dive Analytics <span className="ml-2">→</span>
-            </motion.div>
-          </Link>
+                <div className="text-center mt-2 text-xl font-extrabold text-blue-400 drop-shadow-md">
+                  {latestRoadmap.progress ? Math.round(latestRoadmap.progress) : 0}% Complete
+                </div>
+              </div>
+              <div className="w-full text-left bg-[#10151c] p-3 rounded-lg border border-blue-900/40 mb-4">
+                <h3 className="text-base font-bold text-neutral-200 mb-2 flex items-center gap-2">
+                  <Target size={20} className="text-blue-400" /> Timeline:
+                </h3>
+                <p className="text-neutral-300 text-sm ml-1 mb-2">
+                  {latestRoadmap.timeline_weeks} weeks
+                  <span className="block text-xs text-neutral-500 mt-1 flex items-center gap-1">
+                    <Clock size={16} /> Created: {latestRoadmap.created_at ? new Date(latestRoadmap.created_at).toLocaleDateString() : 'N/A'}
+                  </span>
+                </p>
+              </div>
+              <Link href={`/dashboard/roadmaps/${latestRoadmap.id}`} className="block mt-2">
+                <motion.div
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-700/20 border border-blue-700 rounded-full text-blue-200 font-semibold text-base
+                               hover:bg-blue-700/40 hover:border-blue-400 transition-all duration-200 ease-out"
+                  whileHover={{ x: 5 }}
+                >
+                  Deep Dive Analytics <span className="ml-2">→</span>
+                </motion.div>
+              </Link>
+            </>
+          ) : (
+            <div className="text-neutral-400 mt-4">No roadmaps found. Create one to get started!</div>
+          )}
           <div className="absolute top-0 left-0 w-12 h-12 bg-blue-900/10 rounded-full blur-2xl"></div>
         </motion.div>
 

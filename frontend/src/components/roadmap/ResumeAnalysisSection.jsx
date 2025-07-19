@@ -130,6 +130,11 @@ const ResumeScoreRing = ({ score = 75 }) => {
 };
 
 export default function ResumeAnalysisSection({ resumeInsights }) {
+  // Defensive: handle missing or malformed resumeInsights
+  const skills = Array.isArray(resumeInsights?.identifiedSkills) ? resumeInsights.identifiedSkills : [];
+  const suggestions = Array.isArray(resumeInsights?.analysisAndSuggestions) ? resumeInsights.analysisAndSuggestions : [];
+  const hasResume = skills.length > 0 || suggestions.length > 0;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 40 }}
@@ -169,69 +174,80 @@ export default function ResumeAnalysisSection({ resumeInsights }) {
 
       <div className="p-6 space-y-8">
         {/* Skills Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <CheckCircle2 size={18} className="text-blue-400" />
+        {skills.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <CheckCircle2 size={18} className="text-blue-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">
+                Identified Skills & Strengths
+              </h3>
             </div>
-            <h3 className="text-lg font-bold text-white">
-              Identified Skills & Strengths
-            </h3>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {resumeInsights.identifiedSkills.map((skill, index) => (
-              <SkillBadge key={skill} skill={skill} index={index} />
-            ))}
-          </div>
-        </motion.div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {skills.map((skill, index) => (
+                <SkillBadge key={`${skill}-${index}`} skill={skill} index={index} />
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* AI Insights */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Bot size={18} className="text-blue-400" />
+        {suggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <Bot size={18} className="text-blue-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">AI Recommendations</h3>
             </div>
-            <h3 className="text-lg font-bold text-white">AI Recommendations</h3>
-          </div>
 
-          <div className="space-y-3">
-            {resumeInsights.analysisAndSuggestions.map((suggestion, index) => (
-              <AIInsightCard key={index} insight={suggestion} index={index} />
-            ))}
-          </div>
-        </motion.div>
+            <div className="space-y-3">
+              {suggestions.map((suggestion, index) => (
+                <AIInsightCard key={`ai-${index}`} insight={suggestion} index={index} />
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Resume Score */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/30 rounded-xl p-6 text-center"
-        >
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Award size={20} className="text-blue-400" />
-            <h3 className="text-lg font-bold text-white">Resume Readiness</h3>
-          </div>
-          <ResumeScoreRing score={75} />
-          <motion.p
-            className="text-blue-200/80 text-sm mt-4 leading-relaxed"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.5 }}
+        {hasResume && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/30 rounded-xl p-6 text-center"
           >
-            Complete this roadmap to boost your score to{" "}
-            <span className="text-blue-400 font-semibold">95%</span>!
-          </motion.p>
-        </motion.div>
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Award size={20} className="text-blue-400" />
+              <h3 className="text-lg font-bold text-white">Resume Readiness</h3>
+            </div>
+            <ResumeScoreRing score={75} />
+            <motion.p
+              className="text-blue-200/80 text-sm mt-4 leading-relaxed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.5 }}
+            >
+              Complete this roadmap to boost your score to{" "}
+              <span className="text-blue-400 font-semibold">95%</span>!
+            </motion.p>
+          </motion.div>
+        )}
+        {!hasResume && (
+          <div className="text-neutral-400 text-center py-8">
+            No resume insights available for this roadmap.
+          </div>
+        )}
       </div>
     </motion.div>
   );

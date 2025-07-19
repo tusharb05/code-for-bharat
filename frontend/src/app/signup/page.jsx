@@ -4,25 +4,31 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Sparkles } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext'; // Ensure this path is correct
 
 export default function SignupPage() {
-  const [name, setName] = useState('');
+  const [full_name, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState(''); // Use localError to avoid conflict with authError
   const router = useRouter();
+  const { signup, loading, authError } = useAuth(); // Destructure signup, loading, authError
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => { // Make handleSubmit async
     e.preventDefault();
+    setLocalError(''); // Clear previous local errors
+
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setLocalError('Passwords do not match');
       return;
     }
-    // Simulate signup
-    router.push('/dashboard');
+
+    // Call the signup function from AuthContext
+    await signup(full_name, email, password);
+    // The redirect is handled inside the AuthContext's signup function
   };
 
   return (
@@ -57,16 +63,17 @@ export default function SignupPage() {
         </div>
         <form className="space-y-5" onSubmit={handleSubmit} autoComplete="off">
           <div>
-            <label htmlFor="name" className="text-xs font-bold text-neutral-300 block mb-1 uppercase tracking-widest">Name</label>
+            <label htmlFor="full_name" className="text-xs font-bold text-neutral-300 block mb-1 uppercase tracking-widest">Name</label>
             <input
               type="text"
-              name="name"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              name="full_name"
+              id="full_name"
+              value={full_name}
+              onChange={(e) => setFullName(e.target.value)}
               className="w-full px-3 py-2 bg-white/5 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-base text-white placeholder:text-neutral-400 transition-all duration-300 shadow-inner backdrop-blur-md"
               placeholder="Your Name"
               required
+              disabled={loading}
             />
           </div>
           <div>
@@ -80,6 +87,7 @@ export default function SignupPage() {
               className="w-full px-3 py-2 bg-white/5 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-base text-white placeholder:text-neutral-400 transition-all duration-300 shadow-inner backdrop-blur-md"
               placeholder="you@example.com"
               required
+              disabled={loading}
             />
           </div>
           <div>
@@ -94,6 +102,7 @@ export default function SignupPage() {
                 className="w-full px-3 py-2 bg-white/5 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-base text-white placeholder:text-neutral-400 transition-all duration-300 shadow-inner backdrop-blur-md pr-10"
                 placeholder="••••••••"
                 required
+                disabled={loading}
               />
               <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400 hover:text-blue-400 transition-colors">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -112,22 +121,31 @@ export default function SignupPage() {
                 className="w-full px-3 py-2 bg-white/5 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-base text-white placeholder:text-neutral-400 transition-all duration-300 shadow-inner backdrop-blur-md pr-10"
                 placeholder="••••••••"
                 required
+                disabled={loading}
               />
               <button type="button" onClick={() => setShowConfirm((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400 hover:text-blue-400 transition-colors">
                 {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
-          {error && <p className="text-red-400 text-sm text-center mt-2">{error}</p>}
+          {(localError || authError) && <p className="text-red-400 text-sm text-center mt-2">{localError || authError}</p>}
           <motion.button
             type="submit"
             whileHover={{ scale: 1.04, boxShadow: '0 0 0 4px #22d3ee55' }}
             whileTap={{ scale: 0.97 }}
             className="w-full py-2 mt-1 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-cyan-500 hover:to-blue-600 text-white font-bold text-base rounded-lg shadow-lg transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-cyan-400/40 active:scale-95"
+            disabled={loading}
           >
             <span className="flex items-center justify-center gap-2">
-              <Sparkles size={16} className="-ml-1 animate-pulse" />
-              Sign Up
+              {loading ? (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <Sparkles size={16} className="-ml-1 animate-pulse" />
+              )}
+              {loading ? 'Signing Up...' : 'Sign Up'}
             </span>
           </motion.button>
         </form>
@@ -143,4 +161,4 @@ export default function SignupPage() {
       </motion.div>
     </div>
   );
-} 
+}

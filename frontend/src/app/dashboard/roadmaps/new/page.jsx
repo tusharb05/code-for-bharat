@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight,
@@ -11,10 +11,16 @@ import {
   Sparkles,
   Check,
   Loader2,
-  // SquareDot // This icon is not used in the final rendering logic
+  UploadCloud,
+  CheckCircle,
 } from 'lucide-react';
-import ResumeUploader from '@/components/UI/ResumeUploader'; // Assuming this component exists
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext'; // Import useAuth to get the token
+import { useDropzone } from 'react-dropzone'; // Import useDropzone for ResumeUploader
+
+
+
+const BACKEND_LINK = process.env.NEXT_PUBLIC_BACKEND_LINK || 'http://localhost:8000/api';
 
 // --- Animation Variants ---
 const sectionVariants = {
@@ -42,15 +48,15 @@ const steps = [
   { id: 4, name: 'Generate Roadmap', icon: Sparkles, description: 'Our AI will now synthesize all information to craft your personalized roadmap.' },
 ];
 
-// Add a slugify function
+// Add a slugify function (no longer strictly needed for URL, but might be used elsewhere)
 function slugify(text) {
   return text
     .toString()
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9\s-]/g, '') // Remove non-alphanumeric
-    .replace(/\s+/g, '-')         // Replace spaces with -
-    .replace(/-+/g, '-');          // Collapse multiple -
+    .replace(/\s+/g, '-')        // Replace spaces with -
+    .replace(/-+/g, '-');        // Collapse multiple -
 }
 
 // --- Holographic Blur Layer ---
@@ -77,41 +83,100 @@ export default function NewRoadmapPage() {
   const [formData, setFormData] = useState({
     goal: '',
     resume: null,
-    timeline: { duration: 3, unit: 'Months' },
+    // Change timeline to directly store weeks, as per Postman example
+    timeline_weeks: 3, // Default to 3 weeks
   });
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState(null); // State for API errors
   const router = useRouter();
+  const { token } = useAuth(); // Get the authentication token from AuthContext
 
-  const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, steps.length));
-  const handlePrev = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
+  const handleNext = () => {
+    setError(null); // Clear errors on step change
+    setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+  };
+  const handlePrev = () => {
+    setError(null); // Clear errors on step change
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
 
   const isNextDisabled = () => {
     if (currentStep === 1) return !formData.goal.trim();
     if (currentStep === 2) return !formData.resume;
+    // Step 3 (timeline) doesn't have a specific disable condition beyond initial value
     return false;
   };
 
-  const handleCreateRoadmap = () => {
+  const handleCreateRoadmap = async () => {
     setLoading(true);
     setProgress(0); // Reset progress on new generation attempt
+    setError(null); // Clear previous errors
+
+    if (!token) {
+        setError('Authentication required. Please log in.');
+        setLoading(false);
+        return;
+    }
 
     let currentProgress = 0;
     const interval = setInterval(() => {
-      currentProgress += Math.random() * 15 + 5; // Faster initial jump, then slower
-      if (currentProgress >= 100) {
-        currentProgress = 100;
-        setProgress(100);
-        clearInterval(interval);
-        setTimeout(() => {
-          // Use slugified goal for the roadmap link
-          const slug = slugify(formData.goal || 'my-roadmap');
-          router.push(`/dashboard/roadmaps/${slug}`);
-        }, 800); // Give a moment for 100% to show
-      } else {
-        setProgress(Math.floor(currentProgress));
+      currentProgress += Math.random() * 15 + 5;
+      if (currentProgress >= 95) { // Stop short of 100% until API success
+        currentProgress = 95;
       }
-    }, 200); // Quicker updates for a more dynamic feel
+      setProgress(Math.floor(currentProgress));
+    }, 200);
+
+    try {
+        const dataToSend = new FormData();
+        dataToSend.append('goal', formData.goal);
+        dataToSend.append('timeline_weeks', formData.timeline_weeks.toString()); // Ensure it's a string
+        if (formData.resume) {
+            dataToSend.append('resume', formData.resume); // Append the actual File object
+        }
+
+        const response = await fetch(`${BACKEND_LINK}/create-roadmap/`, {
+            method: 'POST',
+            headers: {
+                // When sending FormData, DO NOT set 'Content-Type': 'application/json'
+                // The browser will set the correct 'Content-Type: multipart/form-data'
+                // along with the boundary automatically.
+                'Authorization': `Bearer ${token}`, // Assuming Token-based authentication
+            },
+            body: dataToSend,
+        });
+
+        clearInterval(interval); // Stop the fake progress bar
+
+        const result = await response.json();
+
+        if (response.ok) {
+            setProgress(100); // Set to 100% on success
+            // Assuming the backend returns the roadmap ID, e.g., { id: "some-uuid-or-number", title: "..." }
+            const roadmapId = result.roadmap_id; // <--- IMPORTANT: Expect the backend to return an 'id' field
+            if (roadmapId) {
+                setTimeout(() => {
+                    router.push(`/dashboard/roadmaps/${roadmapId}`); // <--- CHANGED TO USE ID
+                }, 800); // Give a moment for 100% to show
+            } else {
+                setError('Roadmap created but no ID was returned.');
+                setProgress(0);
+            }
+        } else {
+            // Handle API errors
+            const errorMessage = result.detail || result.message || JSON.stringify(result) || 'Failed to create roadmap.';
+            setError(errorMessage);
+            setProgress(0); // Reset progress on error
+        }
+    } catch (apiError) {
+        clearInterval(interval); // Ensure interval is cleared on network errors
+        console.error('API Error:', apiError);
+        setError(apiError.message || 'An unexpected network error occurred.');
+        setProgress(0); // Reset progress on error
+    } finally {
+      setLoading(false);
+    }
   };
 
   const currentStepData = steps[currentStep - 1];
@@ -214,6 +279,7 @@ export default function NewRoadmapPage() {
             {/* Step 2: Resume */}
             {currentStep === 2 && (
               <div className="w-full max-w-lg">
+                {/* ResumeUploader is now defined directly below or in the same file */}
                 <ResumeUploader onFileChange={(file) => setFormData({...formData, resume: file})} />
                 <p className="text-xs text-neutral-500 mt-2 text-left">We'll analyze your skills and experience to find the gaps.</p>
               </div>
@@ -224,23 +290,16 @@ export default function NewRoadmapPage() {
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 bg-[#0d1117] border border-neutral-700 rounded-lg p-4">
                   <input
                     type="number"
-                    value={formData.timeline.duration}
-                    onChange={(e) => setFormData({...formData, timeline: { ...formData.timeline, duration: Math.max(1, parseInt(e.target.value || '1')) }})}
+                    value={formData.timeline_weeks} // Directly use timeline_weeks
+                    onChange={(e) => setFormData({...formData, timeline_weeks: Math.max(1, parseInt(e.target.value || '1'))})}
                     className="w-28 sm:w-32 px-4 py-3 bg-transparent text-white text-2xl font-bold focus:outline-none text-center"
                     min="1"
-                    aria-label="Timeline duration"
+                    aria-label="Timeline duration in weeks"
                   />
                   <div className="h-10 w-[1px] bg-neutral-600 hidden sm:block"></div>
-                  <select
-                    value={formData.timeline.unit}
-                    onChange={(e) => setFormData({...formData, timeline: { ...formData.timeline, unit: e.target.value }})}
-                    className="bg-[#161b22] border border-neutral-600 rounded-md px-4 py-3 text-base font-medium text-white focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
-                    aria-label="Timeline unit"
-                  >
-                    <option value="Days">Days</option>
-                    <option value="Weeks">Weeks</option>
-                    <option value="Months">Months</option>
-                  </select>
+                  <span className="bg-[#161b22] border border-neutral-600 rounded-md px-4 py-3 text-base font-medium text-white">
+                    Weeks
+                  </span>
                 </div>
                 <p className="text-xs text-neutral-500 mt-2 text-left">A realistic timeline helps in creating an achievable plan.</p>
               </div>
@@ -251,6 +310,15 @@ export default function NewRoadmapPage() {
                 <Sparkles className="w-16 h-16 text-blue-400 animate-sparkle-pulse mb-4" />
                 <p className="text-neutral-400 text-xs max-w-md">Hit the button below to unleash the AI and get your personalized roadmap!</p>
               </div>
+            )}
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-red-400 text-sm mt-4 text-center"
+              >
+                Error: {error}
+              </motion.p>
             )}
           </motion.div>
         </AnimatePresence>
@@ -265,6 +333,7 @@ export default function NewRoadmapPage() {
               onClick={handlePrev}
               className="flex items-center gap-2 px-4 py-2 bg-neutral-700 hover:bg-neutral-600 rounded-full font-semibold text-white transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-neutral-500 text-base"
               aria-label="Previous step"
+              disabled={loading}
             >
               <ArrowLeft size={18}/> Previous
             </motion.button>
@@ -276,7 +345,7 @@ export default function NewRoadmapPage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleNext}
-              disabled={isNextDisabled()}
+              disabled={isNextDisabled() || loading}
               className="flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 rounded-full font-semibold text-white transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-neutral-700 disabled:text-neutral-500 disabled:cursor-not-allowed text-base"
               aria-label="Next step"
             >
@@ -348,7 +417,6 @@ export default function NewRoadmapPage() {
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Internal CSS for custom animations */}
       <style jsx>{`
         @keyframes sparkle-pulse {
           0%, 100% {
@@ -380,6 +448,57 @@ export default function NewRoadmapPage() {
           animation: blob-two 9s infinite ease-in-out;
         }
       `}</style>
+    </div>
+  );
+}
+
+
+// ResumeUploader component (can be in its own file: components/UI/ResumeUploader.jsx)
+export function ResumeUploader({ onFileChange }) {
+  const [file, setFile] = useState(null);
+
+  const onDrop = useCallback((acceptedFiles) => {
+    const uploadedFile = acceptedFiles[0];
+    setFile(uploadedFile);
+    onFileChange(uploadedFile);
+  }, [onFileChange]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    },
+    maxFiles: 1,
+  });
+
+  return (
+    <div
+      {...getRootProps()}
+      className={`relative w-full p-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors
+      ${isDragActive ? 'border-purple-500 bg-purple-500/10' : 'border-neutral-700 hover:border-neutral-600'}`}
+    >
+      <input {...getInputProps()} />
+      <motion.div
+        className="flex flex-col items-center justify-center text-center"
+        animate={{ y: isDragActive ? -10 : 0 }}
+      >
+        {file ? (
+          <>
+            <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
+            <p className="font-semibold text-white">{file.name}</p>
+            <p className="text-sm text-neutral-400">({(file.size / 1024).toFixed(2)} KB)</p>
+            <p className="text-xs text-neutral-500 mt-4">Drop a different file to replace</p>
+          </>
+        ) : (
+          <>
+            <UploadCloud className="w-16 h-16 text-neutral-500 mb-4" />
+            <p className="font-semibold text-white">Drop your resume here or click to upload</p>
+            <p className="text-sm text-neutral-400 mt-1">Supports .pdf, .doc, .docx</p>
+          </>
+        )}
+      </motion.div>
     </div>
   );
 }

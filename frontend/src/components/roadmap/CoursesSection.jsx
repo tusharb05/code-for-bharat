@@ -34,7 +34,8 @@ export default function CoursesSection({ courses }) {
               )}
             </div>
             <div className="flex items-center gap-4 text-sm text-blue-100">
-              <span>{course.totalHours}h total</span>
+              {/* Corrected line: */}
+              <span>{course.totalHours.toFixed(2)}h total</span> 
               <span>{course.weeksNeeded} week{course.weeksNeeded > 1 ? "s" : ""}</span>
               <span className="flex items-center gap-1">
                 <TrendingUp size={14} /> {course.progress} complete
@@ -55,4 +56,4 @@ export default function CoursesSection({ courses }) {
       </div>
     </div>
   );
-} 
+}

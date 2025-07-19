@@ -1,22 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext'; // Ensure this path is correct
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import GradientButton from '@/components/UI/GradientButton';
 import { Eye, EyeOff, Sparkles } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
+  const { login, loading, authError } = useAuth(); // Destructure loading and authError
   const router = useRouter();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => { // Make handleSubmit async
     e.preventDefault();
-    login(email, password);
+    await login(email, password); // Await the login function
+    // The redirect is handled inside the AuthContext's login function
   };
 
   return (
@@ -62,6 +62,7 @@ export default function LoginPage() {
                 className="w-full px-3 py-2 bg-white/5 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-base text-white placeholder:text-neutral-400 transition-all duration-300 shadow-inner backdrop-blur-md"
                 placeholder="you@example.com"
                 required
+                disabled={Boolean(loading)}
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none">
                 <Eye size={16} className="opacity-0" />
@@ -80,21 +81,31 @@ export default function LoginPage() {
                 className="w-full px-3 py-2 bg-white/5 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-base text-white placeholder:text-neutral-400 transition-all duration-300 shadow-inner backdrop-blur-md pr-10"
                 placeholder="••••••••"
                 required
+                disabled={Boolean(loading)}
               />
               <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400 hover:text-blue-400 transition-colors">
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={18} width={18} height={18} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /> : <Eye size={18} width={18} height={18} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
               </button>
             </div>
           </div>
+          {authError && <p className="text-red-400 text-sm text-center mt-2">{authError}</p>} {/* Display error message */}
           <motion.button
             type="submit"
             whileHover={{ scale: 1.04, boxShadow: '0 0 0 4px #22d3ee55' }}
             whileTap={{ scale: 0.97 }}
             className="w-full py-2 mt-1 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-cyan-500 hover:to-blue-600 text-white font-bold text-base rounded-lg shadow-lg transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-cyan-400/40 active:scale-95"
+            disabled={Boolean(loading)}
           >
             <span className="flex items-center justify-center gap-2">
-              <Sparkles size={16} className="-ml-1 animate-pulse" />
-              Sign In
+              {loading ? (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width={20} height={20} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <Sparkles size={16} width={16} height={16} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="-ml-1 animate-pulse" />
+              )}
+              {loading ? 'Signing In...' : 'Sign In'}
             </span>
           </motion.button>
         </form>
@@ -110,4 +121,4 @@ export default function LoginPage() {
       </motion.div>
     </div>
   );
-} 
+}

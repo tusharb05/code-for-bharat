@@ -23,16 +23,35 @@ import {
 
 const getIcon = (type) => {
   switch (type) {
-    case "course":
+    case "COURSE":
       return <Book size={16} className="text-blue-400" />;
-    case "video":
-      return <Youtube size={16} className="text-red-400" />;
-    case "article":
+    case "ARTICLE":
       return <Lightbulb size={16} className="text-yellow-400" />;
-    case "project":
-      return <FolderKanban size={16} className="text-green-400" />;
+    case "PRACTISE":
+      return <Play size={16} className="text-green-400" />;
+    case "VIDEO":
+      return <Youtube size={16} className="text-red-400" />;
+    case "PROJECT":
+      return <FolderKanban size={16} className="text-purple-400" />;
     default:
       return <Circle size={16} className="text-neutral-500" />;
+  }
+};
+
+const getTypeBadge = (type) => {
+  switch (type) {
+    case "COURSE":
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-blue-500/10 text-blue-400 border border-blue-400/30 font-semibold">Course</span>;
+    case "ARTICLE":
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-400/10 text-yellow-500 border border-yellow-400/30 font-semibold">Article</span>;
+    case "PRACTISE":
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-green-500/10 text-green-500 border border-green-500/30 font-semibold">Practise</span>;
+    case "VIDEO":
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/10 text-red-400 border border-red-400/30 font-semibold">Video</span>;
+    case "PROJECT":
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-purple-500/10 text-purple-400 border border-purple-400/30 font-semibold">Project</span>;
+    default:
+      return <span className="px-2 py-0.5 text-xs rounded-full bg-neutral-500/10 text-neutral-400 border border-neutral-400/30 font-semibold">Other</span>;
   }
 };
 
@@ -147,6 +166,7 @@ export default function SchedulerCard({
             <div className="flex-grow min-w-0">
               <div className="flex items-center gap-2 mb-2">
                 {getIcon(task.type)}
+                {getTypeBadge(task.type)}
                 <StatusBadge
                   status={
                     task.completed
@@ -163,9 +183,9 @@ export default function SchedulerCard({
                 )}
               </div>
 
-              {task.type === "course" && task.url ? (
+              {task.resource_link ? (
                 <a
-                  href={task.url}
+                  href={task.resource_link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`text-base font-semibold flex items-center gap-2 hover:text-blue-300 transition-colors group/link ${
