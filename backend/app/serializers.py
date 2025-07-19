@@ -1,6 +1,6 @@
 # serializers.py
 from rest_framework import serializers
-from .models import Roadmap
+from .models import Roadmap, Credential
 from PyPDF2 import PdfReader
 from .utils.resume_parser import extract_sections
 
@@ -51,59 +51,46 @@ class WeekWithTasksSerializer(serializers.ModelSerializer):
         model = Week
         fields = ['title', 'milestone', 'tasks']
 
-# class TaskSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Task
-#         fields = ['id', 'title', 'resource_link', 'duration', 'type', 'completed']
+
+class TaskRoadampDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ['id', 'title', 'resource_link', 'duration', 'type', 'completed']
+
+class WeekRoadmapDetailSerializer(serializers.ModelSerializer):
+    tasks = TaskRoadampDetailSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Week
+        fields = ['id', 'title', 'order', 'milestone', 'progress', 'tasks']
+
+class RoadmapDetailSerializer(serializers.ModelSerializer):
+    weeks = WeekRoadmapDetailSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Roadmap
+        fields = ['id', 'goal', 'timeline_weeks', 'parsed_resume', 'created_at', 'progress', 'weeks']
 
 
-# class WeekSerializer(serializers.ModelSerializer):
-#     tasks = TaskSerializer(many=True, read_only=True)
+class TaskUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ['completed']
 
-#     class Meta:
-#         model = Week
-#         fields = ['id', 'title', 'order', 'milestone', 'progress', 'tasks']
-
-
-# class RoadmapDetailSerializer(serializers.ModelSerializer):
-#     weeks = WeekSerializer(many=True, read_only=True)
-
-#     class Meta:
-#         model = Roadmap
-#         fields = [
-#             'id', 'goal', 'timeline_weeks', 'parsed_resume',
-#             'progress', 'created_at', 'weeks'
-#         ]
+    def update(self, instance, validated_data):
+        instance.completed = validated_data.get('completed', instance.completed)
+        instance.save()
+        instance.week.update_progress()  # This also updates roadmap progress
+        return instance
 
 
-# class RoadmapListSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Roadmap
-#         fields = [
-#             'id',
-#             'goal',
-#             'timeline_weeks',
-#             'progress',
-#             'created_at',
-#         ]
+class RoadmapListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Roadmap
+        fields = ['id', 'goal', 'timeline_weeks', 'parsed_resume', 'created_at', 'progress']
 
 
-# class TaskCompletionToggleSerializer(serializers.Serializer):
-#     user_id = serializers.IntegerField()
-#     task_id = serializers.IntegerField()
-#     completed = serializers.BooleanField()
-
-#     def validate(self, data):
-#         task_id = data.get("task_id")
-#         user_id = data.get("user_id")
-
-#         try:
-#             task = Task.objects.select_related("week__roadmap__user").get(id=task_id)
-#         except Task.DoesNotExist:
-#             raise serializers.ValidationError("Invalid task_id provided.")
-
-#         if task.week.roadmap.user.id != user_id:
-#             raise serializers.ValidationError("Task does not belong to this user.")
-
-#         data["task_instance"] = task
-#         return data
+class CredentialSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Credential
+        fields = ['id', 'title', 'issuing_entity', 'issuance_date', 'verification_url']
